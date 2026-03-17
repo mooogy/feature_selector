@@ -32,4 +32,6 @@ target_link_libraries(feature_selector PRIVATE
 
 target_compile_options(feature_selector PRIVATE
 	-O3
+	-std=c++20
+	-Wall
 )
