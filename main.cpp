@@ -2,17 +2,6 @@
 #include <iostream>
 #include <string>
 
-#include <vector>
-
-#include <limits>
-
-#include <algorithm>
-#include <chrono>
-
-// https://fmt.dev/12.0/
-#include <fmt/base.h>
-#include <fmt/ranges.h>
-
 // ORIGINAL HEADERS
 
 #include "data.h"
@@ -30,7 +19,7 @@ int main() {
 			dataset.data_.size(), dataset.num_features_, 
 			dataset.label_one_count_, dataset.label_two_count_);
 
-	fmt::print("\nPlease choose a feature selection algorithm.\n\t1) Forward Selection\n\t2) Backwards Elimination\n");
+	fmt::print("\nPlease choose a feature selection algorithm.\n\t1) Forward Selection\n\t2) Backward Elimination\n");
 
 
 	while (true) {
@@ -42,12 +31,10 @@ int main() {
 			forward_selection(dataset);
 			break;
 		}
-		/*
 		if (algo_choice == "2") {
-			backwards_elimination(dataset);
+			backward_elimination(dataset);
 			break;
 		}
-		*/
 		fmt::print("ERROR: Invalid algorithm choice. Please enter 1 or 2.\n");
 	}
 

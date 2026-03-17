@@ -3,12 +3,14 @@
 
 // CPP STDLIB
 
+#include <iostream>
 #include <vector>
 #include <utility>
 #include <string>
 
 // UNORIGINAL SUBROUTINE
 
+#include <fmt/base.h>
 #include "csv.hpp"
 
 enum class Label : char {
