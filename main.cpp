@@ -4,11 +4,11 @@
 #include <vector>
 
 #include <limits>
-#include <cmath>
+#include <numeric>
+
+#include <chrono>
 
 // NON C++ STDLIB
-
-
 // https://github.com/vincentlaucsb/csv-parser
 #include "csv.hpp"
 
@@ -97,9 +97,9 @@ struct Dataset {
 
 // NN AND VALIDATION CODE
 
-float euclidean_distance(const Record& first, const Record& second, const std::vector<int>& feature_set) {
+[[nodiscard]] float euclidean_distance(const Record& first, const Record& second, const std::vector<int>& feature_set) {
 	float total_square_diff = 0;
-	
+
 	// index is feature - 1
 	for (const int& feature : feature_set) {
 		float diff = first.features_[feature - 1] - second.features_[feature - 1];
@@ -109,7 +109,7 @@ float euclidean_distance(const Record& first, const Record& second, const std::v
 	return std::sqrt(total_square_diff);
 }
 
-Label nn(const std::vector<Record>& data, const int unlabeled_index, const std::vector<int>& feature_set) {
+[[nodiscard]] Label nn(const std::vector<Record>& data, const int unlabeled_index, const std::vector<int>& feature_set) {
 	const Record& unlabeled = data[unlabeled_index];
 
 	Label nearest_label = Label::One;
@@ -119,17 +119,17 @@ Label nn(const std::vector<Record>& data, const int unlabeled_index, const std::
 		if (i == unlabeled_index) continue;
 
 		float distance = euclidean_distance(data[i], unlabeled, feature_set);
-		
+
 		if (distance < nearest_distance) {
 			nearest_label = data[i].label_;
 			nearest_distance = distance;
 		}
 	}
-	
+
 	return nearest_label;
 }
 
-float leave_one_out_validation(const std::vector<Record>& data, const std::vector<int>& feature_set) {
+[[nodiscard]] float leave_one_out_validation(const std::vector<Record>& data, const std::vector<int>& feature_set) {
 	float record_count = data.size();
 	float total_right = 0;
 
@@ -144,23 +144,74 @@ float leave_one_out_validation(const std::vector<Record>& data, const std::vecto
 	return acc;
 }
 
+// SEARCH ALGO CODE
+
+void forward_selection(const Dataset& dataset) {
+	fmt::print("\nBeginning Forward Selection...\n");
+
+	auto start = std::chrono::high_resolution_clock::now();
+
+	std::vector<int> possible_feature_set;
+	std::iota(possible_feature_set.begin(), possible_feature_set.end(), 1);
+	for (int i = 1; i <= dataset.features_; i++) possible_feature_set.push_back(i);
+
+	std::vector<int> selected_feature_set;
+	float overall_best_acc = std::numeric_limits<float>::min();
+	std::vector<int> overall_best_feature_set;
+
+	while (true) {
+		if (selected_feature_set.size() == possible_feature_set.size()) break;
+
+		int depth = selected_feature_set.size() + 1;
+		float level_best_acc = std::numeric_limits<float>::min();
+		std::vector<int> level_best_feature_set;
+
+		fmt::print("Searching through depth: {}\n", depth);
+
+		for (int feature_index : possible_feature_set) {
+			// skip already selected features
+			if (std::find(selected_feature_set.begin(), selected_feature_set.end(), feature_index) != selected_feature_set.end()) continue;
+
+			std::vector<int> feature_set = selected_feature_set;
+			feature_set.push_back(feature_index);
+
+			float acc = leave_one_out_validation(dataset.data_, feature_set);
+			if (acc > level_best_acc) {
+				level_best_acc = acc;
+				level_best_feature_set = feature_set;
+			}
+		}
+
+		fmt::print("Feature subset {} was best at depth {}. | Accuracy: {:.2f}%\n", level_best_feature_set, depth, level_best_acc);
+
+		if (level_best_acc > overall_best_acc) {
+			overall_best_acc = level_best_acc;
+			overall_best_feature_set = level_best_feature_set;
+		}
+
+		selected_feature_set = level_best_feature_set;
+	}
+
+	auto end = std::chrono::high_resolution_clock::now();
+
+	fmt::print("\nSearch Complete!\n");
+	fmt::print("Feature subset {} is best overall with an accuracy of {:.2f}%\n", overall_best_feature_set, overall_best_acc);
+
+	std::chrono::duration<float> elapsed = end - start;
+	fmt::print("Forward Selection Time Taken: {:.2f}s\n", elapsed.count());
+}
 
 
 // MAIN PROGRAM CODE
 
 int main() {
-	auto dataset = read_dataset();
+	const Dataset dataset = read_dataset();
 
 	fmt::print("\n== DATASET STATS ==\n");
 	fmt::print("LABEL ONE COUNT: {0} | LABEL TWO COUNT: {1}\n",
 			dataset.label_one_count_, dataset.label_two_count_);
 
-	fmt::print("RECORD ONE: {}\n", dataset.data_[0].features_);
-	
-	std::vector<int> f_set = {10, 8, 2};
-	float acc = leave_one_out_validation(dataset.data_, f_set);
-	
-	fmt::print("ACC: {:.2f}", acc);
+	forward_selection(dataset);
 
 	return 0;
 }

@@ -1,3 +1,9 @@
 SANITY_CHECK_ONE.txt
 SANITY_CHECK_TWO.txt
+
+LARGE_DATASET_36.txt
+SMALL_DATASET_73.txt
+
 build/
+
+*.log
