@@ -162,10 +162,10 @@ void backward_elimination(const Dataset& dataset) {
 	auto end = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<float> duration = end - start;
 	
-	fmt::print("\nForward Selection complete!!\n");
+	fmt::print("\nBackward Elimination complete!!\n");
 	fmt::print("Overall best feature set is {} with an accuracy of {:.2f}%\n",
 			overall_best_features, overall_best_acc);
-	fmt::print("Forward Selection Search Time: {:.2f}s\n", duration.count());
+	fmt::print("Backward Elimination Search Time: {:.2f}s\n", duration.count());
 }
 
 
