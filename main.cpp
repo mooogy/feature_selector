@@ -4,7 +4,6 @@
 #include <vector>
 
 #include <limits>
-#include <numeric>
 
 #include <chrono>
 
@@ -50,6 +49,7 @@ struct Dataset {
 	int label_two_count = 0;
 
 	while (true) {
+		fmt::print("Please enter the filename / path of the dataset you would like to analyze.\n> ");
 		std::string filename;
 		std::cin >> filename;
 
@@ -88,7 +88,7 @@ struct Dataset {
 			}
 			break;
 		} catch (...) {
-			std::cout << "ERROR: Could not find file! Please try again.\n";
+			fmt::print("ERROR: Could not find file! Please try again.\n\n");
 		}
 	}
 
@@ -139,9 +139,19 @@ struct Dataset {
 
 	float acc = (total_right / record_count) * 100;
 
-	fmt::print("\tUsing feature(s): {0} | Accuracy: {1:.2f}\n", feature_set, acc);
+	fmt::print("\tUsing feature(s): {} | Accuracy: {:.2f}%\n", feature_set, acc);
 
 	return acc;
+}
+
+[[nodiscard]] float default_rate(const Dataset& dataset) {
+	Label majority = (dataset.label_one_count_ > dataset.label_two_count_) ? Label::One : Label::Two;
+	
+	if (majority == Label::One) {
+		return (float)dataset.label_one_count_ / dataset.data_.size() * 100;
+	} else {
+		return (float)dataset.label_two_count_ / dataset.data_.size() * 100;
+	}
 }
 
 // SEARCH ALGO CODE
@@ -152,7 +162,6 @@ void forward_selection(const Dataset& dataset) {
 	auto start = std::chrono::high_resolution_clock::now();
 
 	std::vector<int> possible_feature_set;
-	std::iota(possible_feature_set.begin(), possible_feature_set.end(), 1);
 	for (int i = 1; i <= dataset.features_; i++) possible_feature_set.push_back(i);
 
 	std::vector<int> selected_feature_set;
@@ -166,7 +175,7 @@ void forward_selection(const Dataset& dataset) {
 		float level_best_acc = std::numeric_limits<float>::min();
 		std::vector<int> level_best_feature_set;
 
-		fmt::print("Searching through depth: {}\n", depth);
+		fmt::print("\nSearching through depth: {}\n", depth);
 
 		for (int feature_index : possible_feature_set) {
 			// skip already selected features
@@ -201,17 +210,90 @@ void forward_selection(const Dataset& dataset) {
 	fmt::print("Forward Selection Time Taken: {:.2f}s\n", elapsed.count());
 }
 
+void backwards_elimination(const Dataset& dataset) {
+	fmt::print("Beginning backwards elimination...\n");
+	auto start = std::chrono::high_resolution_clock::now();
+
+	std::vector<int> selected_feature_set;
+	for (int i = 1; i <= dataset.features_; i++) selected_feature_set.push_back(i);
+
+
+	int depth = 1;
+	float overall_best_acc = std::numeric_limits<float>::min();
+	std::vector<int> overall_best_feature_set = selected_feature_set;
+
+	while (true) {
+		if (selected_feature_set.size() == 1) break;
+
+		float level_best_acc = std::numeric_limits<float>::min();
+		int level_best_removed = 0;
+
+		fmt::print("\nSearching through depth: {}\n", depth);
+		for (int feature_index : selected_feature_set) {
+			std::vector<int> feature_set;
+			for (int f : selected_feature_set)
+				if (f != feature_index) feature_set.push_back(f);
+
+			float acc = leave_one_out_validation(dataset.data_, feature_set);
+			if (acc > level_best_acc) {
+				level_best_acc = acc;
+				level_best_removed = feature_index;
+			}
+		}
+
+
+		selected_feature_set.erase(std::find(selected_feature_set.begin(), selected_feature_set.end(), level_best_removed));
+
+		fmt::print("Feature subset {} was best at depth {}. | Accuracy: {:.2f}%\n", selected_feature_set, depth, level_best_acc);
+		depth += 1;
+
+		if (level_best_acc > overall_best_acc) {
+			overall_best_acc = level_best_acc;
+			overall_best_feature_set = selected_feature_set;
+		}
+	}
+
+	auto end = std::chrono::high_resolution_clock::now();
+
+	fmt::print("\nBackwards elimination complete!\n");
+	fmt::print("Feature subset {} is best overall with an accuracy of {:.2f}%\n", overall_best_feature_set, overall_best_acc);
+
+	std::chrono::duration<float> elapsed = end - start;
+	fmt::print("Backwards Elimination Time: {:.2f}s\n", elapsed.count());
+}
 
 // MAIN PROGRAM CODE
 
 int main() {
+	fmt::print("Welcome to the Feature Selection Program!\n");
 	const Dataset dataset = read_dataset();
 
 	fmt::print("\n== DATASET STATS ==\n");
-	fmt::print("LABEL ONE COUNT: {0} | LABEL TWO COUNT: {1}\n",
-			dataset.label_one_count_, dataset.label_two_count_);
+	fmt::print("FEATURES: {} | LABEL ONE COUNT: {} | LABEL TWO COUNT: {}\n",
+			dataset.features_, dataset.label_one_count_, dataset.label_two_count_);
 
-	forward_selection(dataset);
+	fmt::print("Please choose a feature selection algorithm.\n\t1) Forward Selection\n\t2) Backwards Elimination\n");
+
+
+	while (true) {
+		fmt::print("(1/2): ");
+		std::string algo_choice = "";
+		std::cin >> algo_choice;
+
+
+		fmt::print("\nNearest Neighbor with no features. (default_rate) | Acc: {:.2f}%\n", default_rate(dataset));
+
+		if (algo_choice == "1") {
+			forward_selection(dataset);
+			break;
+		}
+
+		if (algo_choice == "2") {
+			backwards_elimination(dataset);
+			break;
+		}
+		fmt::print("ERROR: Invalid algorithm choice. Please enter 1 or 2.\n");
+	}
 
 	return 0;
 }
