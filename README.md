@@ -1,5 +1,7 @@
 # Feature Selector
 
+I made this for a school project so the parser expects the file's delimiter to be " ", as well as no header. Change the formatter code in *include/data.h* to suit your use case. 
+
 **Dependencies / Borrowed Code**
 - [vincentlaucsb/csv-parser](https://github.com/vincentlaucsb/csv-parser) for parsing text files
 - [fmtlib/fmt](http://github.com/fmtlib/fmt) for simple printing and formatting
